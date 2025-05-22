@@ -1,0 +1,31 @@
+ScreenManager:
+    SplashScreen:
+    HomeScreen:
+
+<SplashScreen>:
+    FloatLayout:
+        canvas.before:
+            Rectangle:
+                pos: self.pos
+                size: self.size
+                source: "assets/icon/bg.jpeg"
+
+        Image:
+            source: "assets/icon/clouds.png"
+            size_hint: 0.4, 0.4
+            pos_hint: {"center_x": 0.5, "center_y": 0.6} 
+        
+        Label: 
+            text: "Weather App"
+            font_size: 24
+            color: 1, 1, 1, 1
+            pos_hint: {"center_x": 0.5, "center_y": 0.35}
+
+<MainScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: "HomeScreen"
+        Button:
+            text: "Keluar"
+            on_press: app.stop()

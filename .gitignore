@@ -1,0 +1,17 @@
+# Folder virtual environment
+venv/
+
+# File cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# File VSCode settings (optional)
+.vscode/
+
+# File OS
+.DS_Store
+Thumbs.db
+
+# File konfigurasi pribadi
+.env
