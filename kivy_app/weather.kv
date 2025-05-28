@@ -1,6 +1,8 @@
 ScreenManager:
     SplashScreen:
+        name: "splash"
     HomeScreen:
+        name: "home"
 
 <SplashScreen>:
     FloatLayout:
@@ -21,11 +23,42 @@ ScreenManager:
             color: 1, 1, 1, 1
             pos_hint: {"center_x": 0.5, "center_y": 0.35}
 
-<MainScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        Label:
-            text: "HomeScreen"
+<HomeScreen>:
+    FloatLayout:
+        canvas.before:
+            Rectangle:
+                pos: self.pos
+                size: self.size
+                source: 'assets/icon/bg.jpeg'
+
+        TextInput:
+            id: city_input
+            hint_text: "Masukkan nama kota"
+            size_hint: 0.8, 0.1
+            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+
         Button:
-            text: "Keluar"
-            on_press: app.stop()
+            text: "Tampilkan Cuaca"
+            size_hint: 0.4, 0.1
+            pos_hint: {"center_x": 0.5, "center_y": 0.6}
+            on_release: root.show_weather()
+
+        Label:
+            id: weather_label
+            text: ""
+            font_size: 18
+            color: 1, 1, 1, 1
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+        Button:
+            text: "Prediksi Cuaca Besok"
+            size_hint: 0.4, 0.1
+            pos_hint: {"center_x": 0.5, "center_y": 0.4}
+            on_release: root.predict_weather()
+
+        Label:
+            id: prediction_label
+            text: ""
+            font_size: 18
+            color: 1, 1, 1, 1
+            pos_hint: {"center_x": 0.5, "center_y": 0.3}
