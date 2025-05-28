@@ -14,21 +14,41 @@ import requests
 from config import API_KEY
 
 API = API_KEY
- 
-class WeatherApp(App):
-    def build(self):
-        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-        self.city_input = TextInput(hint_text="Masukkan nama kota", multiline=False, size_hint_y=None, height=50)
-        self.result_label = Label(text="", size_hint_y=None, height=50)
+class SplashScreen(Screen):
+    pass
 
-        check_button = Button(text="Cek Cuaca", on_press=self.cek_cuaca, size_hint_y=None, height=50)
+class HomeScreen(Screen):
+    def show_weather(self):
+        city = self.ids.city_input.text
+        lat, lon = self.get_coordinates(city)
 
-        self.layout.add_widget(self.city_input)
-        self.layout.add_widget(check_button)
-        self.layout.add_widget(self.result_label)
+        if lat is None or lon is None:
+            self.ids.weather_label.text = "Kota tidak ditemukan :("
+            return
 
-        return self.layout
+        daily = self.get_weather_forecast(lat, lon)
+        cuaca_hari_ini = daily[0]['weather'][0]['main']
+
+        hasil = "Hujan" if 'Rain' in cuaca_hari_ini else "Tidak hujan"
+        self.ids.weather_label.text = f"Hari ini di {city}: {hasil}"
+
+        self.ids.chart_layout.clear_widgets()
+        self.tampilkan_grafik(daily)
+
+    def predict_weather(self):
+        city = self.ids.city_input.text
+        lat, lon = self.get_coordinates(city)
+
+        if lat is None or lon is None:
+            self.ids.prediction_label.text = "Kota tidak ditemukan :(" 
+            return
+
+        daily = self.get_weather_forecast(lat, lon)
+        cuaca_besok = daily[1]['weather'][0]['main']
+
+        hasil = "Hujan" if 'Rain' in cuaca_besok else "Tidak hujan"
+        self.ids.prediction_label.text = f"Besok di {city}: {hasil}"
 
     def get_coordinates(self, city):
         url = f"http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
@@ -44,95 +64,43 @@ class WeatherApp(App):
         data = response.json()
         return data['daily']
 
-    def cek_cuaca(self, instance):
-        city = self.city_input.text
-        lat, lon = self.get_coordinates(city)
+    def tampilkan_grafik(self, daily):
+        self.plot_data(
+            [day['temp']['day'] for day in daily[:7]],
+            'Suhu 7 Hari ke Depan',
+            'Hari', 'Suhu (°C)'
+        )
+        self.plot_data(
+            [day['humidity'] for day in daily[:7]],
+            'Kelembapan 7 Hari ke Depan',
+            'Hari', 'Kelembapan (%)',
+            color='green'
+        )
+        self.plot_data(
+            [day['pressure'] for day in daily[:7]],
+            'Tekanan 7 Hari ke Depan',
+            'Hari', 'Tekanan (hPa)',
+            color='red'
+        )
 
-        if lat is None or lon is None:
-            self.result_label.text = "Kota tidak ditemukan :("
-            return
-
-        daily = self.get_weather_forecast(lat, lon)
-        cuaca_hari_ini = daily[0]['weather'][0]['main']
-
-        if 'Rain' in cuaca_hari_ini:
-            hasil = "Hujan"
-        else:
-            hasil = "Tidak hujan"
-
-        self.result_label.text = f"Hari ini di {city}: {hasil}"
-    
-    def buat_grafik_suhu(self, daily):
-        suhu_harian = [day['temp']['day'] for day in daily[:7]]
+    def plot_data(self, values, title, xlabel, ylabel, color='blue'):
         hari = list(range(1, 8))
 
         plt.clf()
-        plt.plot(hari, suhu_harian, marker='o')
-        plt.title('Suhu 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Suhu (°C)')
+        plt.plot(hari, values, marker='o', color=color)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.grid(True)
 
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
-
         im = CoreImage(buf, ext='png')
         buf.close()
 
-        if hasattr(self, 'grafik_suhu'):
-            self.layout.remove_widget(self.grafik_suhu)
+        self.ids.chart_layout.add_widget(Image(texture=im.texture, size_hint_y=None, height=300))
 
-        self.grafik_suhu = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_suhu)
-
-    def buat_grafik_kelembapan(self, daily):
-        kelembapan = [day['humidity'] for day in daily[:7]]
-        hari = list(range(1, 8))
-
-        plt.clf()
-        plt.plot(hari, kelembapan, marker='o', color='green')
-        plt.title('Kelembapan 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Kelembapan (%)')
-        plt.grid(True)
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-
-        im = CoreImage(buf, ext='png')
-        buf.close()
-
-        if hasattr(self, 'grafik_kelembapan'):
-            self.layout.remove_widget(self.grafik_kelembapan)
-
-        self.grafik_kelembapan = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_kelembapan)
-    
-    def buat_grafik_tekanan(self, daily):
-        tekanan = [day['pressure'] for day in daily[:7]]
-        hari = list(range(1, 8))
-
-        plt.clf()
-        plt.plot(hari, tekanan, marker='o', color='orange')
-        plt.title('Tekanan Udara 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Tekanan (hPa)')
-        plt.grid(True)
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-
-        im = CoreImage(buf, ext='png')
-        buf.close()
-
-        if hasattr(self, 'grafik_tekanan'):
-            self.layout.remove_widget(self.grafik_tekanan)
-
-        self.grafik_tekanan = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_tekanan)
-
-if __name__ == '__main__':
-    WeatherApp().run()
+class WeatherApp(App):
+    def build(self):
+        return ScreenManager()
