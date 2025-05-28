@@ -11,8 +11,10 @@ import numpy as np
 
 import requests
 
-API_KEY = "c8d3296b62fff12fbb62fd968f7812e3"
+from config import API_KEY
 
+API = API_KEY
+ 
 class WeatherApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
