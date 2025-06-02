@@ -1,0 +1,296 @@
+#:kivy 2.0.0
+#:import Color kivy.graphics.Color
+#:import Line kivy.graphics.Line
+#:import GraphWidget GraphWidget
+
+<CekAppUI>: 
+    current_city: root.current_city
+    current_temp: root.current_temp
+    current_condition: root.current_condition
+    daily_forecast_data: root.daily_forecast_data
+    graph_temps: root.graph_temps
+
+    canvas.before:
+        Color(0.2, 0.2, 0.35, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        pos_hint: {'top': 1}
+        padding: dp(10)
+        Label:
+            text: "1:41"
+            font_size: '18sp'
+            halign: 'left'
+            valign: 'middle'
+            text_size: self.size
+        Widget:
+            size_hint_x: None
+            width: dp(100)
+        Label:
+            text: "all"
+            font_size: '18sp'
+            halign: 'right'
+            valign: 'middle'
+            text_size: self.size
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: 0.9, 0.2
+        pos_hint: {'center_x': 0.5, 'y': 0.65}
+        padding: dp(10)
+        spacing: dp(5)
+
+        Label:
+            text: root.current_city
+            font_size: '28sp'
+            bold: True
+            color: 1, 1, 1, 1
+
+        BoxLayout:
+            orientation: 'horizontal'
+            Label:
+                text: f"{root.current_temp}°"
+                font_size: '50sp'
+                bold: True
+                color: 1, 1, 1, 1
+            Label:
+                text: f"{root.current_condition}"
+                font_size: '20sp'
+                color: 0.8, 0.8, 0.8, 1
+                valign: 'bottom'
+                text_size: self.size
+
+    AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'top'
+        size_hint: 0.9, 0.3
+        pos_hint: {'center_x': 0.5, 'y': 0.35}
+        BoxLayout:
+            id: forecast_container
+            orientation: 'vertical'
+            size_hint: 1, 1
+            canvas.before:
+                Color(0.3, 0.3, 0.45, 0.7)
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(20)]
+
+            BoxLayout:
+                size_hint_y: None
+                height: dp(40)
+                padding: dp(10), dp(5)
+                spacing: dp(10)
+                Button:
+                    text: "Daily Forecast"
+                    background_normal: ''
+                    background_color: 0.6, 0.2, 0.8, 1
+                    color: 1, 1, 1, 1
+                    font_size: '16sp'
+                    size_hint_x: None
+                    width: self.texture_size[0] + dp(20)
+                    radius: [dp(15)]
+                    canvas.before:
+                        Color(self.background_color[0], self.background_color[1], self.background_color[2], self.background_color[3])
+                        RoundedRectangle:
+                            size: self.size
+                            pos: self.pos
+                            radius: self.radius
+                Button:
+                    text: "Weekly Forecast"
+                    background_normal: ''
+                    background_color: 0.4, 0.4, 0.5, 0
+                    color: 0.8, 0.8, 0.8, 1
+                    font_size: '16sp'
+                    size_hint_x: None
+                    width: self.texture_size[0] + dp(20)
+                    radius: [dp(15)]
+                    canvas.before:
+                        Color(self.background_color[0], self.background_color[1], self.background_color[2], self.background_color[3])
+                        RoundedRectangle:
+                            size: self.size
+                            pos: self.pos
+                            radius: self.radius
+
+            BoxLayout:
+                id: daily_forecast_items
+                size_hint_y: None
+                height: dp(120)
+                padding: dp(10)
+                spacing: dp(10)
+                GridLayout:
+                    cols: 5
+                    padding: dp(5)
+                    spacing: dp(5)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    id: forecast_grid
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_x: 1
+                        spacing: dp(5)
+                        canvas.before:
+                            Color(0.6, 0.2, 0.8, 0.5)
+                            RoundedRectangle:
+                                size: self.size
+                                pos: self.pos
+                                radius: [dp(15)]
+                        Label:
+                            text: root.daily_forecast_data[1]['day'] if len(root.daily_forecast_data) > 1 else 'TUE'
+                            font_size: '16sp'
+                            color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Image:
+                            source: 'cloudy.png'
+                            size_hint_y: None
+                            height: dp(40)
+                            allow_stretch: True
+                        Label:
+                            text: f"{root.daily_forecast_data[1]['temp']}°" if len(root.daily_forecast_data) > 1 else "20°"
+                            font_size: '20sp'
+                            bold: True
+                            color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_x: 1
+                        spacing: dp(5)
+                        Label:
+                            text: root.daily_forecast_data[0]['day'] if len(root.daily_forecast_data) > 0 else 'MON'
+                            font_size: '16sp'
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Image:
+                            source: 'cloudy.png'
+                            size_hint_y: None
+                            height: dp(40)
+                            allow_stretch: True
+                        Label:
+                            text: f"{root.daily_forecast_data[0]['temp']}°" if len(root.daily_forecast_data) > 0 else "19°"
+                            font_size: '20sp'
+                            bold: True
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_x: 1
+                        spacing: dp(5)
+                        Label:
+                            text: root.daily_forecast_data[2]['day'] if len(root.daily_forecast_data) > 2 else 'WED'
+                            font_size: '16sp'
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Image:
+                            source: 'cloudy.png'
+                            size_hint_y: None
+                            height: dp(40)
+                            allow_stretch: True
+                        Label:
+                            text: f"{root.daily_forecast_data[2]['temp']}°" if len(root.daily_forecast_data) > 2 else "19°"
+                            font_size: '20sp'
+                            bold: True
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_x: 1
+                        spacing: dp(5)
+                        Label:
+                            text: root.daily_forecast_data[3]['day'] if len(root.daily_forecast_data) > 3 else 'THUR'
+                            font_size: '16sp'
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Image:
+                            source: 'rainy.png'
+                            size_hint_y: None
+                            height: dp(40)
+                            allow_stretch: True
+                        Label:
+                            text: f"{root.daily_forecast_data[3]['temp']}°" if len(root.daily_forecast_data) > 3 else "18°"
+                            font_size: '20sp'
+                            bold: True
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_x: 1
+                        spacing: dp(5)
+                        Label:
+                            text: root.daily_forecast_data[4]['day'] if len(root.daily_forecast_data) > 4 else 'FRI'
+                            font_size: '16sp'
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Image:
+                            source: 'sunny.png'
+                            size_hint_y: None
+                            height: dp(40)
+                            allow_stretch: True
+                        Label:
+                            text: f"{root.daily_forecast_data[4]['temp']}°" if len(root.daily_forecast_data) > 4 else "18°"
+                            font_size: '20sp'
+                            bold: True
+                            color: 0.8, 0.8, 0.8, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: dp(200)
+                padding: dp(10)
+                spacing: dp(5)
+                canvas.before:
+                    Color(0.3, 0.3, 0.45, 0.7)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(20)]
+
+                GraphWidget:
+                    id: weather_graph
+                    size_hint: 1, 0.8
+                    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+                    points: root.graph_temps
+                    min_val: min(root.graph_temps) - 2 if root.graph_temps else 0
+                    max_val: max(root.graph_temps) + 2 if root.graph_temps else 10
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(20)
+                    Label:
+                        text: "MON"
+                        font_size: '14sp'
+                        color: 0.8, 0.8, 0.8, 1
+                    Label:
+                        text: "TUE"
+                        font_size: '14sp'
+                        color: 0.8, 0.8, 0.8, 1
+                    Label:
+                        text: "WED"
+                        font_size: '14sp'
+                        color: 0.8, 0.8, 0.8, 1
+                    Label:
+                        text: "THUR"
+                        font_size: '14sp'
+                        color: 0.8, 0.8, 0.8, 1
+                    Label:
+                        text: "FRI"
+                        font_size: '14sp'
+                        color: 0.8, 0.8, 0.8, 1

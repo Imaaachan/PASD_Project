@@ -1,37 +1,83 @@
+# weather.kv
+
 <WeatherRoot>:
-    orientation: 'vertical'
-    padding: 10
-    spacing: 10
-
-    city_input: city_input
-    result_label: result_label
-    graph_layout: graph_layout
-
-    TextInput:
-        id: city_input
-        hint_text: "Masukkan nama kota"
-        multiline: False
-        size_hint_y: None
-        height: 40
-
-    Button:
-        text: "Cek Cuaca"
-        size_hint_y: None
-        height: 40
-        on_press: app.cek_cuaca()
-
-    Label:
-        id: result_label
-        text: ""
-        size_hint_y: None
-        height: 40
-
-    ScrollView:
-        do_scroll_x: False
-
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        
+        # Bagian Prediksi Cuaca Hari Ini
         BoxLayout:
-            id: graph_layout
+            size_hint_y: 0.35 # Sedikit lebih besar untuk informasi hari ini
             orientation: 'vertical'
-            size_hint_y: None
-            spacing: 10
-            height: self.minimum_height
+            Label:
+                text: "Prediksi Cuaca Hari Ini" # Judul bagian
+                font_size: '24sp'
+                bold: True
+                size_hint_y: None
+                height: self.texture_size[1] + dp(10) # Sesuaikan tinggi label dengan teks
+
+            BoxLayout:
+                orientation: 'horizontal'
+                padding: 5
+                spacing: 10
+                
+                Image:
+                    id: weather_icon
+                    source: root.weather_icon_source # Binding ke properti di Python
+                    size_hint: 0.3, 1 # Ikon mengambil 30% lebar
+                    allow_stretch: True
+                    keep_ratio: True
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: 5
+                    Label:
+                        id: weather_status_label
+                        text: root.weather_status # Binding ke properti di Python
+                        font_size: '20sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.width, None # Agar teks wrap
+                    Label:
+                        id: temperature_label
+                        text: root.temperature # Binding ke properti di Python
+                        font_size: '18sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.width, None
+                    Label:
+                        id: pressure_label
+                        text: root.pressure # Binding ke properti di Python
+                        font_size: '18sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.width, None
+                    Label:
+                        id: humidity_label
+                        text: root.humidity # Binding ke properti di Python
+                        font_size: '18sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.width, None
+        
+        # Spacer untuk memisahkan bagian atas dan bawah
+        Widget:
+            size_hint_y: 0.05 # Sedikit ruang
+
+        # Bagian Grafik Prediksi 5 Hari
+        BoxLayout:
+            size_hint_y: 0.6 # Sisa ruang untuk grafik
+            orientation: 'vertical'
+            Label:
+                text: "Grafik Prediksi 5 Hari Ke Depan" # Judul bagian
+                font_size: '22sp'
+                bold: True
+                size_hint_y: None
+                height: self.texture_size[1] + dp(10)
+
+            BoxLayout:
+                id: graph_container # ID ini penting, digunakan di Python untuk menambahkan grafik
+                orientation: 'vertical'
+                spacing: 5
+                # Widget grafik Matplotlib akan ditambahkan secara dinamis di sini
