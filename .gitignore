@@ -16,3 +16,7 @@ Thumbs.db
 # File konfigurasi pribadi
 .env
 config.py
+
+#file besar
+model/
+dataset/
