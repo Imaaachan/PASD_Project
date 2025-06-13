@@ -1,64 +1,82 @@
 ScreenManager:
-    SplashScreen:
-        name: "splash"
     HomeScreen:
-        name: "home"
-
-<SplashScreen>:
-    FloatLayout:
-        canvas.before:
-            Rectangle:
-                pos: self.pos
-                size: self.size
-                source: "assets/icon/bg.jpeg"
-
-        Image:
-            source: "assets/icon/clouds.png"
-            size_hint: 0.4, 0.4
-            pos_hint: {"center_x": 0.5, "center_y": 0.6} 
-        
-        Label: 
-            text: "Weather App"
-            font_size: 24
-            color: 1, 1, 1, 1
-            pos_hint: {"center_x": 0.5, "center_y": 0.35}
+    SettingsScreen:
 
 <HomeScreen>:
-    FloatLayout:
-        canvas.before:
-            Rectangle:
-                pos: self.pos
-                size: self.size
-                source: 'assets/icon/bg.jpeg'
+    name: "home"
+    WeatherAppLayout:
 
+<SettingsScreen>:
+    name: "settings"
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+
+        Label:
+            text: '[b]Pengaturan Aplikasi Cuaca[/b]'
+            markup: True
+            size_hint_y: 0.2
+
+        Button:
+            text: 'Ubah Suhu ke Fahrenheit'
+            size_hint_y: 0.15
+            on_press: root.convert_temp()
+
+        Button:
+            text: 'Ubah Tekanan ke mmHg'
+            size_hint_y: 0.15
+            on_press: root.convert_pressure()
+
+        Button:
+            text: 'Reset ke Default'
+            size_hint_y: 0.15
+            on_press: root.reset_default()
+
+        Button:
+            text: 'Kembali ke Beranda'
+            size_hint_y: 0.15
+            on_press: app.root.current = 'home'
+
+<WeatherAppLayout>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    BoxLayout:
+        size_hint_y: 0.1
+        Spinner:
+            id: location_spinner_kv
+            text: 'Pilih Lokasi'
+            values: root.weather_predictor.get_available_locations()
+            size_hint_x: 0.4
         TextInput:
-            id: city_input
-            hint_text: "Masukkan nama kota"
-            size_hint: 0.8, 0.1
-            pos_hint: {"center_x": 0.5, "center_y": 0.7}
-
+            id: date_input_kv
+            hint_text: 'YYYY-MM-DD (misal: 2023-01-15)'
+            multiline: False
+            size_hint_x: 0.3
         Button:
-            text: "Tampilkan Cuaca"
-            size_hint: 0.4, 0.1
-            pos_hint: {"center_x": 0.5, "center_y": 0.6}
-            on_release: root.show_weather()
+            text: 'Cari Cuaca'
+            size_hint_x: 0.3
+            on_press: root.start_weather_prediction()
 
+    ScrollView:
+        size_hint_y: 0.3
         Label:
-            id: weather_label
-            text: ""
-            font_size: 18
-            color: 1, 1, 1, 1
-            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            id: result_label_kv
+            text: 'Pilih tanggal dan lokasi untuk melihat cuaca.'
+            size_hint_y: None
+            height: self.texture_size[1]
+            halign: 'left'
+            valign: 'top'
+            markup: True
 
-        Button:
-            text: "Prediksi Cuaca Besok"
-            size_hint: 0.4, 0.1
-            pos_hint: {"center_x": 0.5, "center_y": 0.4}
-            on_release: root.predict_weather()
+    BoxLayout:
+        id: graph_container_kv
+        orientation: 'vertical'
+        size_hint_y: 0.5
 
-        Label:
-            id: prediction_label
-            text: ""
-            font_size: 18
-            color: 1, 1, 1, 1
-            pos_hint: {"center_x": 0.5, "center_y": 0.3}
+    Button:
+        text: 'Pengaturan'
+        size_hint_y: 0.1
+        on_press: app.root.current = 'settings'

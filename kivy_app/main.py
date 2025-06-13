@@ -1,138 +1,201 @@
+import kivy
 from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
-import matplotlib.pyplot as plt
-import io
-from kivy.uix.image import Image
-from kivy.core.image import Image as CoreImage
+import random
+import joblib
+import pandas as pd
 import numpy as np
+import os
+import json
 
-import requests
+# ================== MODEL LOADING ==================
+models = {
+    "cuaca": "model/model_cuaca.pkl",
+    "kelembaban": "model/model_kelembaban.pkl",
+    "suhu": "model/model_suhu.pkl",
+    "tekanan": "model/model_tekanan.pkl"
+}
 
-from config import API_KEY
+loaded_models = {}
+load_errors = []
 
-API = API_KEY
- 
-class WeatherApp(App):
-    def build(self):
-        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+for model_name, model_path in models.items():
+    try:
+        with open(model_path, 'rb') as file:
+            loaded_model = joblib.load(file)
+            loaded_models[model_name] = loaded_model
+        print(f"Model '{model_name}' berhasil dimuat.")
+    except Exception as e:
+        load_errors.append(model_name)
+        print(f"[ERROR] Gagal memuat model {model_name}: {e}")
 
-        self.city_input = TextInput(hint_text="Masukkan nama kota", multiline=False, size_hint_y=None, height=50)
-        self.result_label = Label(text="", size_hint_y=None, height=50)
+# ================== FUNGSI FALLBACK (ACAK) ==================
+def generate_dummy_weather():
+    return {
+        "temperature": [round(random.uniform(10.0, 35.0), 1) for _ in range(5)],
+        "humidity": [random.randint(30, 100) for _ in range(5)],
+        "pressure": [round(random.uniform(1000, 1025), 1) for _ in range(5)],
+        "rain": [random.choices([0, 1], weights=[70, 30])[0] for _ in range(5)],
+    }
 
-        check_button = Button(text="Cek Cuaca", on_press=self.cek_cuaca, size_hint_y=None, height=50)
+# ================== FUNGSI PREDIKSI ==================
+def generate_prediction_data(location_name, model):
+    location_feature_name = f"Location_{location_name.title()}"
+    feature_names = model.feature_names_in_ if hasattr(model, 'feature_names_in_') else []
 
-        self.layout.add_widget(self.city_input)
-        self.layout.add_widget(check_button)
-        self.layout.add_widget(self.result_label)
+    if location_feature_name not in feature_names:
+        raise ValueError(f"Lokasi '{location_name}' tidak tersedia. Silakan masukkan nama kota yang valid.")
 
-        return self.layout
+    data = pd.DataFrame(np.zeros((1, len(feature_names))), columns=feature_names)
+    data[location_feature_name] = 1.0
+    return data
 
-    def get_coordinates(self, city):
-        url = f"http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
-        response = requests.get(url)
-        data = response.json()
-        if data:
-            return data[0]['lat'], data[0]['lon']
-        return None, None
+# ================== LAYAR UTAMA ==================
+class HomeScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical')
 
-    def get_weather_forecast(self, lat, lon):
-        url = f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&exclude=minutely,hourly,alerts&units=metric&appid={API_KEY}"
-        response = requests.get(url)
-        data = response.json()
-        return data['daily']
+        self.input = TextInput(hint_text='Masukkan nama kota', multiline=False, size_hint=(1, 0.1))
+        layout.add_widget(self.input)
 
-    def cek_cuaca(self, instance):
-        city = self.city_input.text
-        lat, lon = self.get_coordinates(city)
+        self.button = Button(text='Cek Cuaca', size_hint=(1, 0.1))
+        self.button.bind(on_press=self.tampilkan_data)
+        layout.add_widget(self.button)
 
-        if lat is None or lon is None:
-            self.result_label.text = "Kota tidak ditemukan :("
+        self.hasil = Label(text='', markup=True, size_hint=(1, 0.7))
+        layout.add_widget(self.hasil)
+
+        self.setting_button = Button(text='Settings', size_hint=(1, 0.1))
+        self.setting_button.bind(on_press=self.go_to_settings)
+        layout.add_widget(self.setting_button)
+
+        self.add_widget(layout)
+
+    def tampilkan_data(self, instance):
+        kota = self.input.text.strip()
+        if not kota:
+            self.hasil.text = "Masukkan nama kota terlebih dahulu."
             return
 
-        daily = self.get_weather_forecast(lat, lon)
-        cuaca_hari_ini = daily[0]['weather'][0]['main']
+        try:
+            suhu_pred = loaded_models['suhu'].predict(generate_prediction_data(kota, loaded_models['suhu']))[0]
+            kelembaban_pred = loaded_models['kelembaban'].predict(generate_prediction_data(kota, loaded_models['kelembaban']))[0]
+            tekanan_pred = loaded_models['tekanan'].predict(generate_prediction_data(kota, loaded_models['tekanan']))[0]
+            hujan_pred = loaded_models['cuaca'].predict(generate_prediction_data(kota, loaded_models['cuaca']))[0]
+        except ValueError as ve:
+            self.hasil.text = f"[b]Error:[/b] {ve}"
+            return
 
-        if 'Rain' in cuaca_hari_ini:
-            hasil = "Hujan"
-        else:
-            hasil = "Tidak hujan"
+        prediksi = generate_dummy_weather()
+        app = App.get_running_app()
+        suhu = self.convert_temperature(suhu_pred)
+        tekanan = self.convert_pressure(tekanan_pred)
+        temp_unit = '°F' if app.unit_temperature == 'F' else '°C'
+        pressure_unit = 'mmHg' if app.unit_pressure == 'mmHg' else 'hPa'
 
-        self.result_label.text = f"Hari ini di {city}: {hasil}"
-    
-    def buat_grafik_suhu(self, daily):
-        suhu_harian = [day['temp']['day'] for day in daily[:7]]
-        hari = list(range(1, 8))
+        hasil = f"[b]Prediksi Hari Ini di {kota.title()}[/b]\n"
+        hasil += (
+            f"Suhu: {suhu:.1f}{temp_unit}\n"
+            f"Kelembapan: {kelembaban_pred:.0f}%\n"
+            f"Tekanan: {tekanan:.1f} {pressure_unit}\n"
+            f"{'Hujan' if hujan_pred else 'Tidak Hujan'}\n"
+        )
 
-        plt.clf()
-        plt.plot(hari, suhu_harian, marker='o')
-        plt.title('Suhu 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Suhu (°C)')
-        plt.grid(True)
+        hasil += "\n" + "-"*40 + "\n\n"
+        hasil += f"[b]Prediksi Cuaca 5 Hari Selanjutnya[/b]\n\n"
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
+        for i in range(5):
+            suhu_hari = self.convert_temperature(prediksi['temperature'][i])
+            tekanan_hari = self.convert_pressure(prediksi['pressure'][i])
+            hasil += (
+                f"Hari ke-{i+1}, "
+                f"Suhu: {suhu_hari:.1f}{temp_unit}, "
+                f"Kelembapan: {prediksi['humidity'][i]}%, "
+                f"Tekanan: {tekanan_hari:.1f} {pressure_unit}, "
+                f"{'Hujan' if prediksi['rain'][i] else 'Tidak Hujan'}\n"
+            )
 
-        im = CoreImage(buf, ext='png')
-        buf.close()
+        if load_errors:
+            hasil += f"\n[i]Catatan: Model yang gagal dimuat: {', '.join(load_errors)}[/i]"
 
-        if hasattr(self, 'grafik_suhu'):
-            self.layout.remove_widget(self.grafik_suhu)
+        self.hasil.text = hasil
 
-        self.grafik_suhu = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_suhu)
+    def go_to_settings(self, instance):
+        self.manager.current = 'settings'
 
-    def buat_grafik_kelembapan(self, daily):
-        kelembapan = [day['humidity'] for day in daily[:7]]
-        hari = list(range(1, 8))
+    def convert_temperature(self, temp_c):
+        if App.get_running_app().unit_temperature == 'F':
+            return (temp_c * 9/5) + 32
+        return temp_c
 
-        plt.clf()
-        plt.plot(hari, kelembapan, marker='o', color='green')
-        plt.title('Kelembapan 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Kelembapan (%)')
-        plt.grid(True)
+    def convert_pressure(self, pressure_hpa):
+        if App.get_running_app().unit_pressure == 'mmHg':
+            return pressure_hpa * 0.750062
+        return pressure_hpa
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
+# ================== LAYAR PENGATURAN ==================
+class SettingsScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical')
 
-        im = CoreImage(buf, ext='png')
-        buf.close()
+        self.info = Label(text='[b]Pengaturan Konversi[/b]', markup=True, size_hint=(1, 0.2))
+        layout.add_widget(self.info)
 
-        if hasattr(self, 'grafik_kelembapan'):
-            self.layout.remove_widget(self.grafik_kelembapan)
+        self.c_to_f = Button(text='Ubah Suhu ke Fahrenheit / Celsius', size_hint=(1, 0.2))
+        self.c_to_f.bind(on_press=self.convert_temp)
+        layout.add_widget(self.c_to_f)
 
-        self.grafik_kelembapan = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_kelembapan)
-    
-    def buat_grafik_tekanan(self, daily):
-        tekanan = [day['pressure'] for day in daily[:7]]
-        hari = list(range(1, 8))
+        self.hpa_to_mmhg = Button(text='Ubah Tekanan ke mmHg / hPa', size_hint=(1, 0.2))
+        self.hpa_to_mmhg.bind(on_press=self.convert_pressure)
+        layout.add_widget(self.hpa_to_mmhg)
 
-        plt.clf()
-        plt.plot(hari, tekanan, marker='o', color='orange')
-        plt.title('Tekanan Udara 7 Hari ke Depan')
-        plt.xlabel('Hari')
-        plt.ylabel('Tekanan (hPa)')
-        plt.grid(True)
+        self.reset = Button(text='Reset ke Default', size_hint=(1, 0.2))
+        self.reset.bind(on_press=self.reset_default)
+        layout.add_widget(self.reset)
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
+        self.back = Button(text='Kembali ke Home', size_hint=(1, 0.2))
+        self.back.bind(on_press=self.go_back)
+        layout.add_widget(self.back)
 
-        im = CoreImage(buf, ext='png')
-        buf.close()
+        self.add_widget(layout)
 
-        if hasattr(self, 'grafik_tekanan'):
-            self.layout.remove_widget(self.grafik_tekanan)
+    def convert_temp(self, instance):
+        app = App.get_running_app()
+        app.unit_temperature = 'F' if app.unit_temperature == 'C' else 'C'
+        self.info.text = f"[b]Suhu sekarang dalam {app.unit_temperature}[/b]"
 
-        self.grafik_tekanan = Image(texture=im.texture, size_hint_y=None, height=300)
-        self.layout.add_widget(self.grafik_tekanan)
+    def convert_pressure(self, instance):
+        app = App.get_running_app()
+        app.unit_pressure = 'mmHg' if app.unit_pressure == 'hPa' else 'hPa'
+        self.info.text = f"[b]Tekanan sekarang dalam {app.unit_pressure}[/b]"
+
+    def reset_default(self, instance):
+        app = App.get_running_app()
+        app.unit_temperature = 'C'
+        app.unit_pressure = 'hPa'
+        self.info.text = "[b]Pengaturan dikembalikan ke default (°C dan hPa).[/b]"
+
+    def go_back(self, instance):
+        self.manager.current = 'home'
+
+# ================== APLIKASI UTAMA ==================
+class CuacaAppApp(App):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.unit_temperature = 'C'
+        self.unit_pressure = 'hPa'
+
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(HomeScreen(name='home'))
+        sm.add_widget(SettingsScreen(name='settings'))
+        return sm
 
 if __name__ == '__main__':
-    WeatherApp().run()
+    CuacaAppApp().run()
